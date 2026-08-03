@@ -12,36 +12,44 @@ EARLIEST among the classes still compatible with what has already
 been scheduled. Finishing early leaves the most room in the roster
 for other classes, which is why this greedy choice leads to an
 optimal (maximum-count) solution.
+
+Note: No built-in sort() / sorted() is used for the core logic - the
+sort by finish time is implemented manually (insertion sort) since the
+assignment requires the algorithmic logic to be written by hand.
+
+No user input is required - the class requests are hardcoded below,
+and the program simply shows the problem and solves it.
 """
 
 
 # ---------------------------------------------------------------------
 # Hardcoded problem data: requested lecture hall bookings for one day.
-# Each entry: [Class ID, Course Code, Date, Start Time, Finish Time]
+# Each entry: [Class ID, Course Code, Course Description, Date,
+#              Start Time, Finish Time]
 # Start/Finish are given in 24-hour "HH:MM" format.
 # ---------------------------------------------------------------------
 ROSTER_REQUESTS = [
-    ["C1", "CSC2014", "2026-08-03", "08:00", "09:30"],
-    ["C2", "MPU3332", "2026-08-03", "09:00", "10:30"],
-    ["C3", "CSC2103", "2026-08-03", "09:45", "11:00"],
-    ["C4", "ENG1010", "2026-08-03", "11:00", "12:30"],
-    ["C5", "CSC2014", "2026-08-03", "12:00", "13:00"],
-    ["C6", "MPU3332", "2026-08-03", "13:00", "14:30"],
-    ["C7", "CSC2103", "2026-08-03", "13:30", "15:00"],
-    ["C8", "ENG1010", "2026-08-03", "14:45", "16:00"],
-    ["C9", "CSC2014", "2026-08-03", "16:00", "17:00"],
-    ["C10", "MPU3332", "2026-08-03", "16:30", "18:00"],
+    ["C1", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "08:00", "09:30"],
+    ["C2", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "09:00", "10:30"],
+    ["C3", "CSC2103", "Data Structures and Algorithms", "2026-08-03", "09:45", "11:00"],
+    ["C4", "ENG1010", "Communication Skills", "2026-08-03", "11:00", "12:30"],
+    ["C5", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "12:00", "13:00"],
+    ["C6", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "13:00", "14:30"],
+    ["C7", "CSC2103", "Data Structures and Algorithms", "2026-08-03", "13:30", "15:00"],
+    ["C8", "ENG1010", "Communication Skills", "2026-08-03", "14:45", "16:00"],
+    ["C9", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "16:00", "17:00"],
+    ["C10", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "16:30", "18:00"],
 ]
 
 
 def manual_sort_by_finish_time(requests):
     """
     Sorts a list of class requests
-    [id, course, date, start, finish] in ascending order of finish
-    time using insertion sort (implemented manually, no built-in sort
-    library used). Finish times are "HH:MM" strings, which compare
-    correctly with normal string comparison since they are zero-padded
-    24-hour format.
+    [id, course, description, date, start, finish] in ascending order
+    of finish time using insertion sort (implemented manually, no
+    built-in sort library used). Finish times are "HH:MM" strings,
+    which compare correctly with normal string comparison since they
+    are zero-padded 24-hour format.
     """
     lst = requests[:]  # copy so we don't mutate the original
 
@@ -51,7 +59,7 @@ def manual_sort_by_finish_time(requests):
 
         inserted = False
         for j in range(i):
-            if key[4] < lst[j][4]:  # compare by finish time (index 4)
+            if key[5] < lst[j][5]:  # compare by finish time (index 5)
                 lst.insert(j, key)
                 inserted = True
                 break
@@ -67,7 +75,7 @@ def select_roster(requests, log=None):
     Applies the greedy algorithm to select the maximum number of
     non-overlapping class bookings for the lecture hall.
 
-    requests: list of [Class ID, Course, Date, Start, Finish]
+    requests: list of [Class ID, Course, Description, Date, Start, Finish]
     log: optional list - if provided, one row is appended per class
          request in the form [Class ID, Decision, Reason], so the
          decisions can be printed neatly as a table afterwards
@@ -82,7 +90,7 @@ def select_roster(requests, log=None):
     # Step 2: Always select the first class (earliest finish time),
     #          since there is nothing booked yet to clash with it.
     selected = [sorted_requests[0]]
-    last_finish_time = sorted_requests[0][4]
+    last_finish_time = sorted_requests[0][5]
 
     if log is not None:
         log.append([sorted_requests[0][0], "ACCEPTED", "Hall is free"])
@@ -92,11 +100,11 @@ def select_roster(requests, log=None):
     #          selected (i.e. it doesn't clash with the hall booking)
     for i in range(1, len(sorted_requests)):
         current = sorted_requests[i]
-        if current[3] >= last_finish_time:
+        if current[4] >= last_finish_time:
             selected.append(current)
             if log is not None:
                 log.append([current[0], "ACCEPTED", f"Starts at/after {last_finish_time}"])
-            last_finish_time = current[4]
+            last_finish_time = current[5]
         else:
             if log is not None:
                 log.append([current[0], "REJECTED", f"Clashes until {last_finish_time}"])
@@ -104,22 +112,23 @@ def select_roster(requests, log=None):
     return selected
 
 
-def print_decision_log(title, log):
-    print(f"\n{title}")
-    header = f"{'Class':<8}{'Decision':<12}{'Reason':<28}"
-    print(header)
-    print("-" * len(header))
-    for class_id, decision, reason in log:
-        print(f"{class_id:<8}{decision:<12}{reason:<28}")
-
-
 def print_table(title, requests):
     print(f"\n{title}")
-    header = f"{'Class':<8}{'Course':<10}{'Date':<12}{'Start':<8}{'Finish':<8}"
+    header = (f"{'Class':<8}| {'Course':<10}| {'Description':<38}"
+              f"| {'Date':<12}| {'Start':<8}| {'Finish':<8}")
     print(header)
     print("-" * len(header))
     for r in requests:
-        print(f"{r[0]:<8}{r[1]:<10}{r[2]:<12}{r[3]:<8}{r[4]:<8}")
+        print(f"{r[0]:<8}| {r[1]:<10}| {r[2]:<38}| {r[3]:<12}| {r[4]:<8}| {r[5]:<8}")
+
+
+def print_decision_log(title, log):
+    print(f"\n{title}")
+    header = f"{'Class':<8}| {'Decision':<12}| {'Reason':<28}"
+    print(header)
+    print("-" * len(header))
+    for class_id, decision, reason in log:
+        print(f"{class_id:<8}| {decision:<12}| {reason:<28}")
 
 
 def main():
