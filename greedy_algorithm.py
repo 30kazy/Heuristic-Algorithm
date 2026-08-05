@@ -13,14 +13,9 @@ been scheduled. Finishing early leaves the most room in the roster
 for other classes, which is why this greedy choice leads to an
 optimal (maximum-count) solution.
 
-Note: No built-in sort() / sorted() is used for the core logic - the
-sort by finish time is implemented manually (insertion sort) since the
-assignment requires the algorithmic logic to be written by hand.
-
-No user input is required - the class requests are hardcoded below,
-and the program simply shows the problem and solves it.
+Note: Standard insertion sort (via array shifting) is implemented 
+manually to satisfy the requirement of not using built-in sort functions.
 """
-
 
 # ---------------------------------------------------------------------
 # Hardcoded problem data: requested lecture hall bookings for one day.
@@ -44,63 +39,50 @@ ROSTER_REQUESTS = [
 
 def manual_sort_by_finish_time(requests):
     """
-    Sorts a list of class requests
-    [id, course, description, date, start, finish] in ascending order
-    of finish time using insertion sort (implemented manually, no
-    built-in sort library used). Finish times are "HH:MM" strings,
-    which compare correctly with normal string comparison since they
-    are zero-padded 24-hour format.
+    Sorts a list of class requests [id, course, description, date, start, finish]
+    in ascending order of finish time using standard Insertion Sort.
+    Finish times are "HH:MM" strings, which compare lexicographically.
     """
-    lst = requests[:]  # copy so we don't mutate the original
+    # Create a deep copy of nested lists so the original list is unmutated
+    lst = [r[:] for r in requests]
 
     for i in range(1, len(lst)):
         key = lst[i]
-        lst.pop(i)
-
-        inserted = False
-        for j in range(i):
-            if key[5] < lst[j][5]:  # compare by finish time (index 5)
-                lst.insert(j, key)
-                inserted = True
-                break
-
-        if not inserted:
-            lst.insert(i, key)
+        j = i - 1
+        # Shift elements of lst[0..i-1] that have finish time > key's finish time
+        while j >= 0 and lst[j][5] > key[5]:
+            lst[j + 1] = lst[j]
+            j -= 1
+        lst[j + 1] = key
 
     return lst
 
 
-def select_roster(requests, log=None):
+def select_roster(sorted_requests, log=None):
     """
     Applies the greedy algorithm to select the maximum number of
-    non-overlapping class bookings for the lecture hall.
+    non-overlapping class bookings from an ALREADY SORTED list of requests.
 
-    requests: list of [Class ID, Course, Description, Date, Start, Finish]
-    log: optional list - if provided, one row is appended per class
-         request in the form [Class ID, Decision, Reason], so the
-         decisions can be printed neatly as a table afterwards
+    sorted_requests: list sorted by finish time ascending
+    log: optional list to track decision logs [Class ID, Decision, Reason]
     returns: list of selected classes, in the order they were chosen
     """
-    if not requests:
+    if not sorted_requests:
         return []
 
-    # Step 1: Sort requests by finish time (greedy ordering)
-    sorted_requests = manual_sort_by_finish_time(requests)
-
-    # Step 2: Always select the first class (earliest finish time),
-    #          since there is nothing booked yet to clash with it.
+    # Step 1: Always select the first class (earliest finish time)
     selected = [sorted_requests[0]]
     last_finish_time = sorted_requests[0][5]
 
     if log is not None:
         log.append([sorted_requests[0][0], "ACCEPTED", "Hall is free"])
 
-    # Step 3: Walk through the rest, greedily picking any class whose
-    #          start time is >= the finish time of the last class we
-    #          selected (i.e. it doesn't clash with the hall booking)
+    # Step 2: Greedily pick classes whose start time is >= last finish time
     for i in range(1, len(sorted_requests)):
         current = sorted_requests[i]
-        if current[4] >= last_finish_time:
+        start_time = current[4]
+        
+        if start_time >= last_finish_time:
             selected.append(current)
             if log is not None:
                 log.append([current[0], "ACCEPTED", f"Starts at/after {last_finish_time}"])
@@ -133,7 +115,7 @@ def print_decision_log(title, log):
 
 def main():
     print("=" * 60)
-    print("   LECTURE HALL ROSTER SCHEDULING (GREEDY - ACTIVITY SELECTION)")
+    print("    LECTURE HALL ROSTER SCHEDULING (GREEDY - ACTIVITY SELECTION)")
     print("=" * 60)
 
     print("\nProblem:")
@@ -156,10 +138,12 @@ def main():
     print("  than the finish time of the last class already booked into")
     print("  the hall (i.e. it does not clash with the current booking).")
     decision_log = []
-    selected = select_roster(ROSTER_REQUESTS, log=decision_log)
+    
+    # Pass pre-sorted requests directly to avoid double-sorting
+    selected = select_roster(sorted_requests, log=decision_log)
     print_decision_log("Accept / Reject Decisions:", decision_log)
 
-    print_table("\nFinal Lecture Hall Roster (Optimal Schedule):", selected)
+    print_table("Final Lecture Hall Roster (Optimal Schedule):", selected)
 
     print(f"\nMaximum number of classes that can use the hall: {len(selected)}")
     print("Roster order:", " -> ".join(r[0] for r in selected))
