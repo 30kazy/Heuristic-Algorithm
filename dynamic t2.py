@@ -58,7 +58,7 @@ def find_path(maze, x, y, end_x, end_y, visited, path_board):
         if find_path(maze, x, y - 1, end_x, end_y, visited, path_board): return True #left 
 
         if path_board[x][y] != 'S':
-            path_board[x][y] = '.' #cells that can be stepped on 
+            path_board[x][y] = '.' # Backtrack happens here as the mark path ('*') changes back to open space ('.') since no valid path was found from here
         return False
 
     return False
