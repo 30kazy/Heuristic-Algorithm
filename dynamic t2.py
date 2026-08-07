@@ -79,9 +79,14 @@ def setup_maze():
     start_y = get_valid_input(f"Enter Start Column (0 to {cols-1}): ", 0, cols - 1)
 
     print("\nAnd now your end point.")
-    end_x = get_valid_input(f"Enter End Row (0 to {rows-1}): ", 0, rows - 1)
-    end_y = get_valid_input(f"Enter End Column (0 to {cols-1}): ", 0, cols - 1)
-
+    while True:
+        end_x = get_valid_input(f"Enter End Row (0 to {rows-1}): ", 0, rows - 1)
+        end_y = get_valid_input(f"Enter End Column (0 to {cols-1}): ", 0, cols - 1)
+        if end_x == start_x and end_y == start_y:
+            print(f"End point can't be the same as the start point at ({start_x}, {start_y}). Try again.")
+        else:
+            break
+        
     total_cells = rows * cols 
     num_walls = int((density / 100) * total_cells)
 
