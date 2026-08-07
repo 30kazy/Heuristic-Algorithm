@@ -14,8 +14,7 @@ for other classes, which is why this greedy choice leads to an
 optimal (maximum-count) solution.
 
 INPUT: this program takes real input from the user, either:
-  (1) a file - a CSV (.csv) or an Excel workbook (.xlsx), each row:
-      ClassID, Course, Description, Date, Start, Finish
+  (1) a CSV file (each line: ClassID,Course,Description,Date,Start,Finish)
       Date must be DD-MM-YYYY and Start/Finish must be 24-hour HH:MM, or
   (2) typed directly on the screen, one class at a time.
 No data is hardcoded into the source code.
@@ -26,42 +25,22 @@ not using built-in sort functions.
 
 import re
 import os
-import datetime
 
 TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")           # 24-hour HH:MM
 DATE_PATTERN = re.compile(r"^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$")  # DD-MM-YYYY
 
 
-def _cell_to_str(value):
-    """
-    Converts a single Excel cell value to the plain string format this
-    program expects. Excel often stores dates/times as real datetime
-    objects (not text) even when the cell is displayed as DD-MM-YYYY
-    or HH:MM, so those are reformatted here to match.
-    """
-    if value is None:
-        return ""
-    if isinstance(value, datetime.datetime):
-        # A full timestamp: could be a date-only or date+time cell.
-        if value.time() == datetime.time(0, 0):
-            return value.strftime("%d-%m-%Y")
-        return value.strftime("%H:%M")
-    if isinstance(value, datetime.date):
-        return value.strftime("%d-%m-%Y")
-    if isinstance(value, datetime.time):
-        return value.strftime("%H:%M")
-    return str(value).strip()
-
-
 # ---------------------------------------------------------------------
-# INPUT — Option 1: read requests from a file on disk (.csv or .xlsx)
+# INPUT — Option 1: read requests from a CSV file on disk
 # ---------------------------------------------------------------------
-def read_requests_from_csv(filepath):
+def read_requests_from_file(filepath):
     """
     Reads class booking requests from a CSV file.
     Expected columns per line: ClassID,Course,Description,Date,Start,Finish
     The first line may optionally be a header ("ClassID,Course,...") and
     is skipped automatically if detected.
+    :param filepath: path to the CSV file supplied by the user
+    :return: list of raw request rows [id, course, description, date, start, finish]
     """
     requests = []
     with open(filepath, "r", encoding="utf-8-sig") as f:
@@ -77,43 +56,6 @@ def read_requests_from_csv(filepath):
                 continue
             requests.append(fields)
     return requests
-
-
-def read_requests_from_xlsx(filepath):
-    """
-    Reads class booking requests directly from an Excel (.xlsx) file
-    using openpyxl. Expected columns (in order), one class per row:
-    ClassID, Course, Description, Date, Start, Finish.
-    The first row may optionally be a header and is skipped automatically.
-    """
-    from openpyxl import load_workbook
-
-    requests = []
-    wb = load_workbook(filepath, data_only=True)
-    ws = wb.active
-    for row_no, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        if row is None or all(c is None for c in row):
-            continue
-        fields = [_cell_to_str(c) for c in row[:6]]
-        if row_no == 1 and fields[0].lower() == "classid":
-            continue  # skip header row
-        if len(fields) != 6:
-            print(f"Skipping malformed row {row_no} in file (expected 6 columns).")
-            continue
-        requests.append(fields)
-    return requests
-
-
-def read_requests_from_file(filepath):
-    """
-    Dispatches to the correct reader based on the file extension
-    (.xlsx -> Excel reader, anything else -> CSV reader).
-    :param filepath: path to the file supplied by the user
-    :return: list of raw request rows [id, course, description, date, start, finish]
-    """
-    if filepath.lower().endswith(".xlsx"):
-        return read_requests_from_xlsx(filepath)
-    return read_requests_from_csv(filepath)
 
 
 # ---------------------------------------------------------------------
@@ -170,7 +112,7 @@ def choose_input_source():
         print("  2. Type them on the screen")
         choice = input("Enter 1 or 2: ").strip()
         if choice == "1":
-            path = input("Enter the file path (e.g. roster_input_data.xlsx or .csv): ").strip()
+            path = input("Enter the file path (e.g. roster_input_data.csv): ").strip()
             if not os.path.isfile(path):
                 print(f"File not found: {path}\n")
                 continue
