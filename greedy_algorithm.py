@@ -13,14 +13,8 @@ been scheduled. Finishing early leaves the most room in the roster
 for other classes, which is why this greedy choice leads to an
 optimal (maximum-count) solution.
 
-Note: Standard insertion sort (via array shifting) is implemented
-manually to satisfy the requirement of not using built-in sort functions.
-
-Validation (added):
-Before scheduling, every request is checked against a set of
-constraints. Any request that breaks a constraint is REJECTED at the
-validation stage (with a reason) and never reaches the greedy
-algorithm at all, so bad data cannot silently corrupt the schedule.
+Note: Quicksort is implemented manually to satisfy the requirement of
+not using built-in sort functions.
 """
 
 import re
@@ -66,12 +60,11 @@ def validate_requests(requests, log=None):
       1. Class ID, Course Code, Description, Date must all be non-empty.
       2. Class ID must be unique across the whole roster.
       3. Start and Finish must match strict 24-hour "HH:MM" format.
-      4. Start time must be strictly earlier than Finish time
-         (zero-length or negative-length bookings are rejected).
+      4. Start time must be strictly earlier than Finish time.
 
-    requests: raw list of [id, course, description, date, start, finish]
-    log: optional list to record [Class ID, Decision, Reason]
-    returns: (valid_requests, invalid_requests)
+    :param requests: raw list of [id, course, description, date, start, finish]
+    :param log: optional list to record [Class ID, Status, Reason]
+    :return: (valid_requests, invalid_requests)
     """
     valid = []
     invalid = []
@@ -81,7 +74,6 @@ def validate_requests(requests, log=None):
         class_id, course, description, date, start, finish = r
         reasons = []
 
-        # Constraint 1: required fields not empty
         if not class_id.strip():
             reasons.append("Class ID is empty")
         if not course.strip():
@@ -90,22 +82,15 @@ def validate_requests(requests, log=None):
             reasons.append("Description is empty")
         if not date.strip():
             reasons.append("Date is empty")
-
-        # Constraint 2: unique Class ID
         if class_id in seen_ids:
             reasons.append(f"Duplicate Class ID '{class_id}'")
 
-        # Constraint 3: valid HH:MM 24-hour format
         start_ok = bool(TIME_PATTERN.match(start))
         finish_ok = bool(TIME_PATTERN.match(finish))
         if not start_ok:
             reasons.append(f"Start time '{start}' is not valid 24-hour HH:MM")
         if not finish_ok:
             reasons.append(f"Finish time '{finish}' is not valid 24-hour HH:MM")
-
-        # Constraint 4: start must be strictly before finish
-        # (only checked when both times are well-formed, else comparison
-        # itself would be meaningless)
         if start_ok and finish_ok and start >= finish:
             reasons.append(f"Start time '{start}' is not before finish time '{finish}'")
 
@@ -122,30 +107,54 @@ def validate_requests(requests, log=None):
     return valid, invalid
 
 
-def manual_sort_by_finish_time(requests):
+# ---------------------------------------------------------------------
+# QUICKSORT (sorts requests by finish time, index 5)
+# ---------------------------------------------------------------------
+def partition(list_arr, low, high):
     """
-    Sorts a list of class requests [id, course, description, date, start, finish]
-    in ascending order of finish time using standard Insertion Sort.
-    Finish times are "HH:MM" strings, which compare lexicographically.
+    Method for quicksort algorithm
+    :param list_arr: list of requests that needs to be sorted by finish time
+    :param low: the lowest part of the list that this method will look at
+    :param high: the highest part of the list that this method will look at
+    :return: returns the position of the correctly sorted request in the list
     """
-    lst = [r[:] for r in requests]
+    pivot = list_arr[high][5]  # finish time of the last element is the pivot
+    low_pos = low  # index of smaller element
+    for i in range(low, high):
+        if pivot > list_arr[i][5]:
+            # place list_arr[i] at the front of the list
+            list_arr[low_pos], list_arr[i] = list_arr[i], list_arr[low_pos]
+            low_pos += 1
+    # place the pivot in the middle of the list.
+    list_arr[high], list_arr[low_pos] = list_arr[low_pos], list_arr[high]
+    return low_pos
 
-    for i in range(1, len(lst)):
-        key = lst[i]
-        j = i - 1
-        while j >= 0 and lst[j][5] > key[5]:
-            lst[j + 1] = lst[j]
-            j -= 1
-        lst[j + 1] = key
 
-    return lst
+def quick_sort(list_arr, low, high):
+    """
+    Quicksort algorithm to sort requests by finish time
+    :param list_arr: the list of requests that will be sorted
+    :param low: the lower boundary of the part of the list that needs to be sorted
+    :param high: the upper boundary of the part of the list that needs to be sorted
+    """
+    if low < high:
+        pivot_pos = partition(list_arr, low, high)
+        quick_sort(list_arr, low, pivot_pos - 1)
+        quick_sort(list_arr, pivot_pos + 1, high)
 
 
+# ---------------------------------------------------------------------
+# GREEDY ACTIVITY SELECTION
+# ---------------------------------------------------------------------
 def select_roster(sorted_requests, log=None):
     """
     Applies the greedy algorithm to select the maximum number of
     non-overlapping class bookings from an ALREADY SORTED, ALREADY
     VALIDATED list of requests.
+
+    :param sorted_requests: list sorted by finish time ascending
+    :param log: optional list to track decision logs [Class ID, Decision, Reason]
+    :return: list of selected classes, in the order they were chosen
     """
     if not sorted_requests:
         return []
@@ -215,11 +224,12 @@ def main():
     if invalid_requests:
         print(f"\n{len(invalid_requests)} request(s) rejected at validation and excluded from scheduling.")
 
-    print("\nStep 1 - Sort by finish time:")
+    print("\nStep 1 - Sort by finish time (Quicksort):")
     print("  Every VALID request is sorted so the class that finishes EARLIEST")
     print("  comes first. Considering early finishers first leaves the")
     print("  most remaining time in the day for other classes.")
-    sorted_requests = manual_sort_by_finish_time(valid_requests)
+    sorted_requests = [r[:] for r in valid_requests]  # copy so original list is unmutated
+    quick_sort(sorted_requests, 0, len(sorted_requests) - 1)
     print_table("Valid Requests Sorted by Finish Time:", sorted_requests)
 
     print("\nStep 2 - Greedily accept or reject each class in that order:")
