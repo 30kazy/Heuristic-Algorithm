@@ -3,9 +3,9 @@ Lecture Hall Roster Scheduling - Greedy Algorithm (Activity Selection)
 ------------------------------------------------------------------------
 Problem: A university has ONE lecture hall. Several classes have
 requested to use it on the same day, but some of their requested time
-slots overlap. Given each class's requested start time and finish
-time, select the MAXIMUM number of classes that can be scheduled into
-the hall without any two classes overlapping.
+slots overlap. Given each class's requested start date/time and finish
+date/time, select the MAXIMUM number of classes that can be scheduled
+into the hall without any two classes overlapping.
 
 Greedy Choice: At each step, always pick the class that finishes
 EARLIEST among the classes still compatible with what has already
@@ -13,39 +13,172 @@ been scheduled. Finishing early leaves the most room in the roster
 for other classes, which is why this greedy choice leads to an
 optimal (maximum-count) solution.
 
+INPUT: this program takes real input from the user, either:
+  (1) a file - a CSV (.csv) or an Excel workbook (.xlsx), each row:
+      ClassID, Course, Description, Date, Start, Finish
+      Date must be DD-MM-YYYY and Start/Finish must be 24-hour HH:MM, or
+  (2) typed directly on the screen, one class at a time.
+No data is hardcoded into the source code.
+
 Note: Quicksort is implemented manually to satisfy the requirement of
 not using built-in sort functions.
 """
 
 import re
+import os
+import datetime
+
+TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")           # 24-hour HH:MM
+DATE_PATTERN = re.compile(r"^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$")  # DD-MM-YYYY
+
+
+def _cell_to_str(value):
+    """
+    Converts a single Excel cell value to the plain string format this
+    program expects. Excel often stores dates/times as real datetime
+    objects (not text) even when the cell is displayed as DD-MM-YYYY
+    or HH:MM, so those are reformatted here to match.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, datetime.datetime):
+        # A full timestamp: could be a date-only or date+time cell.
+        if value.time() == datetime.time(0, 0):
+            return value.strftime("%d-%m-%Y")
+        return value.strftime("%H:%M")
+    if isinstance(value, datetime.date):
+        return value.strftime("%d-%m-%Y")
+    if isinstance(value, datetime.time):
+        return value.strftime("%H:%M")
+    return str(value).strip()
+
 
 # ---------------------------------------------------------------------
-# Hardcoded problem data: requested lecture hall bookings for one day.
-# A few deliberately BROKEN entries (C11-C14) are included so the
-# validation step below has something to catch and demonstrate.
-# Each entry: [Class ID, Course Code, Course Description, Date,
-#              Start Time, Finish Time]
-# Start/Finish are given in 24-hour "HH:MM" format.
+# INPUT — Option 1: read requests from a file on disk (.csv or .xlsx)
 # ---------------------------------------------------------------------
-ROSTER_REQUESTS = [
-    ["C1", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "08:00", "09:30"],
-    ["C2", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "09:00", "10:30"],
-    ["C3", "CSC2103", "Data Structures and Algorithms", "2026-08-03", "09:45", "11:00"],
-    ["C4", "ENG1010", "Communication Skills", "2026-08-03", "11:00", "12:30"],
-    ["C5", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "12:00", "13:00"],
-    ["C6", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "13:00", "14:30"],
-    ["C7", "CSC2103", "Data Structures and Algorithms", "2026-08-03", "13:30", "15:00"],
-    ["C8", "ENG1010", "Communication Skills", "2026-08-03", "14:45", "16:00"],
-    ["C9", "CSC2014", "Data Structures & Image Processing", "2026-08-03", "16:00", "17:00"],
-    ["C10", "MPU3332", "Integrity and Anti-Corruption", "2026-08-03", "16:30", "18:00"],
-    # --- deliberately invalid rows, to prove validation works ---
-    ["C11", "CSC2999", "Broken: finish before start", "2026-08-03", "15:00", "14:00"],
-    ["C12", "CSC2998", "Broken: bad time format", "2026-08-03", "9am", "10:00"],
-    ["C13", "", "Broken: missing course code", "2026-08-03", "10:00", "11:00"],
-    ["C1", "CSC2997", "Broken: duplicate Class ID (C1 used above)", "2026-08-03", "07:00", "07:30"],
-]
+def read_requests_from_csv(filepath):
+    """
+    Reads class booking requests from a CSV file.
+    Expected columns per line: ClassID,Course,Description,Date,Start,Finish
+    The first line may optionally be a header ("ClassID,Course,...") and
+    is skipped automatically if detected.
+    """
+    requests = []
+    with open(filepath, "r", encoding="utf-8-sig") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            if line_no == 1 and line.lower().startswith("classid"):
+                continue  # skip header row
+            fields = [x.strip() for x in line.split(",")]
+            if len(fields) != 6:
+                print(f"Skipping malformed line {line_no} in file (expected 6 fields): {line}")
+                continue
+            requests.append(fields)
+    return requests
 
-TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")  # strict 24-hour HH:MM
+
+def read_requests_from_xlsx(filepath):
+    """
+    Reads class booking requests directly from an Excel (.xlsx) file
+    using openpyxl. Expected columns (in order), one class per row:
+    ClassID, Course, Description, Date, Start, Finish.
+    The first row may optionally be a header and is skipped automatically.
+    """
+    from openpyxl import load_workbook
+
+    requests = []
+    wb = load_workbook(filepath, data_only=True)
+    ws = wb.active
+    for row_no, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        if row is None or all(c is None for c in row):
+            continue
+        fields = [_cell_to_str(c) for c in row[:6]]
+        if row_no == 1 and fields[0].lower() == "classid":
+            continue  # skip header row
+        if len(fields) != 6:
+            print(f"Skipping malformed row {row_no} in file (expected 6 columns).")
+            continue
+        requests.append(fields)
+    return requests
+
+
+def read_requests_from_file(filepath):
+    """
+    Dispatches to the correct reader based on the file extension
+    (.xlsx -> Excel reader, anything else -> CSV reader).
+    :param filepath: path to the file supplied by the user
+    :return: list of raw request rows [id, course, description, date, start, finish]
+    """
+    if filepath.lower().endswith(".xlsx"):
+        return read_requests_from_xlsx(filepath)
+    return read_requests_from_csv(filepath)
+
+
+# ---------------------------------------------------------------------
+# INPUT — Option 2: read requests typed on the screen
+# ---------------------------------------------------------------------
+def get_valid_date(prompt):
+    """Keeps asking until the user enters a valid DD-MM-YYYY date."""
+    while True:
+        d = input(prompt).strip()
+        if DATE_PATTERN.match(d):
+            return d
+        print("Invalid date. Please use DD-MM-YYYY format, e.g. 03-08-2026")
+
+
+def get_valid_time(prompt):
+    """Keeps asking until the user enters a valid 24-hour HH:MM time."""
+    while True:
+        t = input(prompt).strip()
+        if TIME_PATTERN.match(t):
+            return t
+        print("Invalid time. Please use 24-hour HH:MM format, e.g. 09:30")
+
+
+def read_requests_from_screen():
+    """
+    Prompts the user to type in class booking requests one at a time.
+    Press Enter on a blank Class ID to finish entering requests.
+    :return: list of raw request rows [id, course, description, date, start, finish]
+    """
+    requests = []
+    print("\nEnter class booking requests. Press Enter on a blank Class ID to stop.\n")
+    while True:
+        class_id = input("Class ID: ").strip()
+        if not class_id:
+            break
+        course = input("Course Code: ").strip()
+        description = input("Description: ").strip()
+        date = get_valid_date("Date (DD-MM-YYYY): ")
+        start = get_valid_time("Start Time (HH:MM): ")
+        finish = get_valid_time("Finish Time (HH:MM): ")
+        requests.append([class_id, course, description, date, start, finish])
+        print(f"Added {class_id}.\n")
+    return requests
+
+
+def choose_input_source():
+    """
+    Asks the user whether to load requests from a file or type them on
+    the screen, and returns the resulting list of raw requests.
+    """
+    while True:
+        print("How would you like to enter the class booking requests?")
+        print("  1. Load from a file")
+        print("  2. Type them on the screen")
+        choice = input("Enter 1 or 2: ").strip()
+        if choice == "1":
+            path = input("Enter the file path (e.g. roster_input_data.xlsx or .csv): ").strip()
+            if not os.path.isfile(path):
+                print(f"File not found: {path}\n")
+                continue
+            return read_requests_from_file(path)
+        elif choice == "2":
+            return read_requests_from_screen()
+        else:
+            print("Invalid choice, please enter 1 or 2.\n")
 
 
 # ---------------------------------------------------------------------
@@ -59,7 +192,7 @@ def validate_requests(requests, log=None):
     Constraints enforced:
       1. Class ID, Course Code, Description, Date must all be non-empty.
       2. Class ID must be unique across the whole roster.
-      3. Start and Finish must match strict 24-hour "HH:MM" format.
+      3. Date must match YYYY-MM-DD; Start and Finish must match 24-hour HH:MM.
       4. Start time must be strictly earlier than Finish time.
 
     :param requests: raw list of [id, course, description, date, start, finish]
@@ -82,6 +215,8 @@ def validate_requests(requests, log=None):
             reasons.append("Description is empty")
         if not date.strip():
             reasons.append("Date is empty")
+        elif not DATE_PATTERN.match(date):
+            reasons.append(f"Date '{date}' is not valid DD-MM-YYYY")
         if class_id in seen_ids:
             reasons.append(f"Duplicate Class ID '{class_id}'")
 
@@ -119,13 +254,11 @@ def partition(list_arr, low, high):
     :return: returns the position of the correctly sorted request in the list
     """
     pivot = list_arr[high][5]  # finish time of the last element is the pivot
-    low_pos = low  # index of smaller element
+    low_pos = low
     for i in range(low, high):
         if pivot > list_arr[i][5]:
-            # place list_arr[i] at the front of the list
             list_arr[low_pos], list_arr[i] = list_arr[i], list_arr[low_pos]
             low_pos += 1
-    # place the pivot in the middle of the list.
     list_arr[high], list_arr[low_pos] = list_arr[low_pos], list_arr[high]
     return low_pos
 
@@ -151,10 +284,6 @@ def select_roster(sorted_requests, log=None):
     Applies the greedy algorithm to select the maximum number of
     non-overlapping class bookings from an ALREADY SORTED, ALREADY
     VALIDATED list of requests.
-
-    :param sorted_requests: list sorted by finish time ascending
-    :param log: optional list to track decision logs [Class ID, Decision, Reason]
-    :return: list of selected classes, in the order they were chosen
     """
     if not sorted_requests:
         return []
@@ -207,22 +336,34 @@ def main():
 
     print("\nProblem:")
     print("  One lecture hall is available. Several classes have each")
-    print("  requested a time slot on the same day, but some of those")
-    print("  slots overlap - the hall can only host one class at a time.")
+    print("  requested a time slot, but some of those slots overlap -")
+    print("  the hall can only host one class at a time.")
     print("  Goal: schedule the MAXIMUM number of non-overlapping classes.")
+    print()
 
-    print_table("All Requested Bookings (raw, includes bad data):", ROSTER_REQUESTS)
+    raw_requests = choose_input_source()
+
+    if not raw_requests:
+        print("\nNo requests entered. Nothing to schedule.")
+        return
+
+    print_table("\nAll Requested Bookings (raw input):", raw_requests)
 
     print("\nStep 0 - Validate constraints:")
     print("  Every request must have all fields filled in, a unique Class ID,")
-    print("  properly formatted 24-hour HH:MM times, and Start < Finish.")
-    print("  Anything that fails is rejected here and never reaches scheduling.")
+    print("  a valid DD-MM-YYYY date, properly formatted 24-hour HH:MM times,")
+    print("  and Start < Finish. Anything that fails is rejected here and")
+    print("  never reaches scheduling.")
     validation_log = []
-    valid_requests, invalid_requests = validate_requests(ROSTER_REQUESTS, log=validation_log)
+    valid_requests, invalid_requests = validate_requests(raw_requests, log=validation_log)
     print_decision_log("Validation Results:", validation_log, col2="Status")
 
     if invalid_requests:
         print(f"\n{len(invalid_requests)} request(s) rejected at validation and excluded from scheduling.")
+
+    if not valid_requests:
+        print("\nNo valid requests remain after validation. Nothing to schedule.")
+        return
 
     print("\nStep 1 - Sort by finish time (Quicksort):")
     print("  Every VALID request is sorted so the class that finishes EARLIEST")
