@@ -1,4 +1,4 @@
-import random
+import random """used during maze generation for walls"""
 
 def get_valid_input(prompt, min_val, max_val):
     """Keeps asking the user for a number until they give a valid one in range."""
@@ -49,16 +49,16 @@ def find_path(maze, x, y, end_x, end_y, visited, path_board):
 
     if is_safe(maze, x, y, visited):
         visited[x][y] = True
-        if path_board[x][y] != 'S':
-            path_board[x][y] = '*'
+        if path_board[x][y] != 'S': #start point
+            path_board[x][y] = '*' #path taken
 
-        if find_path(maze, x + 1, y, end_x, end_y, visited, path_board): return True
-        if find_path(maze, x, y + 1, end_x, end_y, visited, path_board): return True
-        if find_path(maze, x - 1, y, end_x, end_y, visited, path_board): return True
-        if find_path(maze, x, y - 1, end_x, end_y, visited, path_board): return True
+        if find_path(maze, x + 1, y, end_x, end_y, visited, path_board): return True #down
+        if find_path(maze, x, y + 1, end_x, end_y, visited, path_board): return True #right 
+        if find_path(maze, x - 1, y, end_x, end_y, visited, path_board): return True #up
+        if find_path(maze, x, y - 1, end_x, end_y, visited, path_board): return True #left 
 
         if path_board[x][y] != 'S':
-            path_board[x][y] = '.'
+            path_board[x][y] = '.' #cells that can be stepped on 
         return False
 
     return False
@@ -82,17 +82,17 @@ def setup_maze():
     end_x = get_valid_input(f"Enter End Row (0 to {rows-1}): ", 0, rows - 1)
     end_y = get_valid_input(f"Enter End Column (0 to {cols-1}): ", 0, cols - 1)
 
-    total_cells = rows * cols
+    total_cells = rows * cols 
     num_walls = int((density / 100) * total_cells)
 
     # We regenerate the walls if this attempt boxes in the start or end completely.
     # Random placement alone can't guarantee a path exists, so we check every time.
-    max_attempts = 200
+    max_attempts = 200 
     for attempt in range(1, max_attempts + 1):
         maze = [[0 for _ in range(cols)] for _ in range(rows)]
 
         walls_placed = 0
-        while walls_placed < num_walls:
+        while walls_placed < num_walls: 
             r = random.randint(0, rows - 1)
             c = random.randint(0, cols - 1)
             if maze[r][c] == 0:
