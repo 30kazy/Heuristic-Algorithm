@@ -1,47 +1,11 @@
-"""
-Lecture Hall Roster Scheduling - Greedy Algorithm (Activity Selection)
-------------------------------------------------------------------------
-Problem: A university has ONE lecture hall. Several classes have
-requested to use it on the same day, but some of their requested time
-slots overlap. Given each class's requested start date/time and finish
-date/time, select the MAXIMUM number of classes that can be scheduled
-into the hall without any two classes overlapping.
-
-Greedy Choice: At each step, always pick the class that finishes
-EARLIEST among the classes still compatible with what has already
-been scheduled. Finishing early leaves the most room in the roster
-for other classes, which is why this greedy choice leads to an
-optimal (maximum-count) solution.
-
-INPUT: this program takes real input from the user, either:
-  (1) a CSV file (each line: ClassID,Course,Description,Date,Start,Finish)
-      Date must be DD-MM-YYYY and Start/Finish must be 24-hour HH:MM, or
-  (2) typed directly on the screen, one class at a time.
-No data is hardcoded into the source code.
-
-Note: Quicksort is implemented manually to satisfy the requirement of
-not using built-in sort functions.
-"""
-
 import re
 import os
 
 TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")           # 24-hour HH:MM
 DATE_PATTERN = re.compile(r"^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$")  # DD-MM-YYYY
 
-
-# ---------------------------------------------------------------------
 # INPUT — Option 1: read requests from a CSV file on disk
-# ---------------------------------------------------------------------
 def read_requests_from_file(filepath):
-    """
-    Reads class booking requests from a CSV file.
-    Expected columns per line: ClassID,Course,Description,Date,Start,Finish
-    The first line may optionally be a header ("ClassID,Course,...") and
-    is skipped automatically if detected.
-    :param filepath: path to the CSV file supplied by the user
-    :return: list of raw request rows [id, course, description, date, start, finish]
-    """
     requests = []
     with open(filepath, "r", encoding="utf-8-sig") as f:
         for line_no, line in enumerate(f, start=1):
@@ -57,34 +21,23 @@ def read_requests_from_file(filepath):
             requests.append(fields)
     return requests
 
-
-# ---------------------------------------------------------------------
 # INPUT — Option 2: read requests typed on the screen
-# ---------------------------------------------------------------------
 def get_valid_date(prompt):
-    """Keeps asking until the user enters a valid DD-MM-YYYY date."""
     while True:
         d = input(prompt).strip()
         if DATE_PATTERN.match(d):
             return d
         print("Invalid date. Please use DD-MM-YYYY format, e.g. 03-08-2026")
 
-
 def get_valid_time(prompt):
-    """Keeps asking until the user enters a valid 24-hour HH:MM time."""
     while True:
         t = input(prompt).strip()
         if TIME_PATTERN.match(t):
             return t
         print("Invalid time. Please use 24-hour HH:MM format, e.g. 09:30")
 
-
 def read_requests_from_screen():
-    """
-    Prompts the user to type in class booking requests one at a time.
-    Press Enter on a blank Class ID to finish entering requests.
-    :return: list of raw request rows [id, course, description, date, start, finish]
-    """
+    """" Asks the user whether to load requests from a file or type them on the screen, and returns the resulting list of raw requests.""""
     requests = []
     print("\nEnter class booking requests. Press Enter on a blank Class ID to stop.\n")
     while True:
@@ -102,10 +55,6 @@ def read_requests_from_screen():
 
 
 def choose_input_source():
-    """
-    Asks the user whether to load requests from a file or type them on
-    the screen, and returns the resulting list of raw requests.
-    """
     while True:
         print("How would you like to enter the class booking requests?")
         print("  1. Load from a file")
@@ -122,25 +71,8 @@ def choose_input_source():
         else:
             print("Invalid choice, please enter 1 or 2.\n")
 
-
-# ---------------------------------------------------------------------
 # CONSTRAINTS / VALIDATION
-# ---------------------------------------------------------------------
 def validate_requests(requests, log=None):
-    """
-    Applies data-integrity constraints to the raw request list and
-    splits it into (valid, invalid) lists.
-
-    Constraints enforced:
-      1. Class ID, Course Code, Description, Date must all be non-empty.
-      2. Class ID must be unique across the whole roster.
-      3. Date must match YYYY-MM-DD; Start and Finish must match 24-hour HH:MM.
-      4. Start time must be strictly earlier than Finish time.
-
-    :param requests: raw list of [id, course, description, date, start, finish]
-    :param log: optional list to record [Class ID, Status, Reason]
-    :return: (valid_requests, invalid_requests)
-    """
     valid = []
     invalid = []
     seen_ids = set()
@@ -148,7 +80,6 @@ def validate_requests(requests, log=None):
     for r in requests:
         class_id, course, description, date, start, finish = r
         reasons = []
-
         if not class_id.strip():
             reasons.append("Class ID is empty")
         if not course.strip():
@@ -161,7 +92,6 @@ def validate_requests(requests, log=None):
             reasons.append(f"Date '{date}' is not valid DD-MM-YYYY")
         if class_id in seen_ids:
             reasons.append(f"Duplicate Class ID '{class_id}'")
-
         start_ok = bool(TIME_PATTERN.match(start))
         finish_ok = bool(TIME_PATTERN.match(finish))
         if not start_ok:
@@ -170,7 +100,6 @@ def validate_requests(requests, log=None):
             reasons.append(f"Finish time '{finish}' is not valid 24-hour HH:MM")
         if start_ok and finish_ok and start >= finish:
             reasons.append(f"Start time '{start}' is not before finish time '{finish}'")
-
         if reasons:
             invalid.append(r)
             if log is not None:
@@ -183,10 +112,7 @@ def validate_requests(requests, log=None):
 
     return valid, invalid
 
-
-# ---------------------------------------------------------------------
 # QUICKSORT (sorts requests by finish time, index 5)
-# ---------------------------------------------------------------------
 def partition(list_arr, low, high):
     """
     Method for quicksort algorithm
@@ -217,10 +143,7 @@ def quick_sort(list_arr, low, high):
         quick_sort(list_arr, low, pivot_pos - 1)
         quick_sort(list_arr, pivot_pos + 1, high)
 
-
-# ---------------------------------------------------------------------
 # GREEDY ACTIVITY SELECTION
-# ---------------------------------------------------------------------
 def select_roster(sorted_requests, log=None):
     """
     Applies the greedy algorithm to select the maximum number of
