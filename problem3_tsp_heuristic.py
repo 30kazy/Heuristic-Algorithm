@@ -189,7 +189,7 @@ def choose_starting_location(destinations):
             print("Please enter a valid integer index.")
 
 
-def main():
+def run():
     print_header("Travelling Salesman Problem using Nearest Neighbour Heuristic")
 
     print_matrix(destinations, distance_matrix_km)
@@ -216,4 +216,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()

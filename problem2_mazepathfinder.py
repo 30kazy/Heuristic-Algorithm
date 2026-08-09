@@ -132,25 +132,31 @@ def print_maze(path_board, title):
         print("| " + " ".join(str(cell) for cell in row) + " |")
     print("-" * (width + 2))
 
-maze, rows, cols, start_x, start_y, end_x, end_y = setup_maze()
 
-visited = [[False for _ in range(cols)] for _ in range(rows)]
-path_board = [['.' if maze[r][c] == 0 else '#' for c in range(cols)] for r in range(rows)]
-path_board[start_x][start_y] = 'S'
-path_board[end_x][end_y] = 'E'
+def run():
+    maze, rows, cols, start_x, start_y, end_x, end_y = setup_maze()
 
-print("\nKEYWORDS:  S = Start   E = End   # = Wall   . = Open Path   * = Solved Path")
+    visited = [[False for _ in range(cols)] for _ in range(rows)]
+    path_board = [['.' if maze[r][c] == 0 else '#' for c in range(cols)] for r in range(rows)]
+    path_board[start_x][start_y] = 'S'
+    path_board[end_x][end_y] = 'E'
 
-print_maze(path_board, "GENERATED MAZE")
+    print("\nKEYWORDS:  S = Start   E = End   # = Wall   . = Open Path   * = Solved Path")
 
-print("\nCalculating path...")
+    print_maze(path_board, "GENERATED MAZE")
 
-if find_path(maze, start_x, start_y, end_x, end_y, visited, path_board):
-    print("\nA path was found! '*' marks the path from start to end.")
-    print_maze(path_board, "SOLVED MAZE")
-else:
-    print("\nNo valid path exists in this generated maze.")
+    print("\nCalculating path...")
 
-print("\n" + "=" * 50)
-print("Program finished! BYE".center(50))
-print("=" * 50)
+    if find_path(maze, start_x, start_y, end_x, end_y, visited, path_board):
+        print("\nA path was found! '*' marks the path from start to end.")
+        print_maze(path_board, "SOLVED MAZE")
+    else:
+        print("\nNo valid path exists in this generated maze.")
+
+    print("\n" + "=" * 50)
+    print("Program finished! BYE".center(50))
+    print("=" * 50)
+
+
+if __name__ == "__main__":
+    run()

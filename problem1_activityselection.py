@@ -37,7 +37,7 @@ def get_valid_time(prompt):
         print("Invalid time. Please use 24-hour HH:MM format, e.g. 09:30")
 
 def read_requests_from_screen():
-    """" Asks the user whether to load requests from a file or type them on the screen, and returns the resulting list of raw requests.""""
+    """ Asks the user whether to load requests from a file or type them on the screen, and returns the resulting list of raw requests."""
     requests = []
     print("\nEnter class booking requests. Press Enter on a blank Class ID to stop.\n")
     while True:
@@ -194,7 +194,7 @@ def print_decision_log(title, log, col2="Decision"):
         print(f"{class_id:<8}| {decision:<10}| {reason:<55}")
 
 
-def main():
+def run():
     print("=" * 60)
     print("    LECTURE HALL ROSTER SCHEDULING (GREEDY - ACTIVITY SELECTION)")
     print("=" * 60)
@@ -256,6 +256,5 @@ def main():
     print("never do worse than any other selection order, so the count")
     print("of classes scheduled above is the maximum possible.")
 
-
 if __name__ == "__main__":
-    main()
+    run()
