@@ -154,7 +154,7 @@ def interactive_nearest_neighbour_tsp(destinations, distance_matrix_km, neighbou
         current_location = next_location
         step_num += 1
 
-        print(f"-> Travelling to '{destinations[next_location]}' ({dist:.2f} km)")
+        print(f"\n-> Travelling to '{destinations[next_location]}' ({dist:.2f} km)")
 
     # Return to the starting location to complete the cycle
     return_distance = distance_matrix_km[current_location][start_index]
