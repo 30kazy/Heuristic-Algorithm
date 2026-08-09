@@ -1,0 +1,15 @@
+ClassID,Course,Description,Date,Start,Finish
+C1,CSC2014,Data Structures & Image Processing,03-08-2026,08:00,09:30
+C2,MPU3332,Integrity and Anti-Corruption,03-08-2026,09:00,10:30
+C3,CSC2103,Data Structures and Algorithms,03-08-2026,09:45,11:00
+C4,ENG1010,Communication Skills,03-08-2026,11:00,12:30
+C5,CSC2014,Data Structures & Image Processing,03-08-2026,12:00,13:00
+C6,MPU3332,Integrity and Anti-Corruption,03-08-2026,13:00,14:30
+C7,CSC2103,Data Structures and Algorithms,03-08-2026,13:30,15:00
+C8,ENG1010,Communication Skills,03-08-2026,14:45,16:00
+C9,CSC2014,Data Structures & Image Processing,03-08-2026,16:00,17:00
+C10,MPU3332,Integrity and Anti-Corruption,03-08-2026,16:30,18:00
+C11,CSC2999,Broken: finish before start,03-08-2026,15:00,14:00
+C12,CSC2998,Broken: bad time format,03-08-2026,9am,10:00
+C13,,Broken: missing course code,03-08-2026,10:00,11:00
+C1,CSC2997,Broken: duplicate Class ID (C1 used above),03-08-2026,07:00,07:30
